@@ -1,0 +1,28 @@
+{
+    "providers": {
+        "openrouter": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://openrouter.ai/api/v1/chat/completions"
+        },
+        "openai": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://api.openai.com/v1/"
+        },
+        "gemini": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/models"
+        },
+        "ollama": {
+            "base_url": "http://localhost:11434"
+        },
+        "huggingface": {
+            "token": ""
+        }
+    }
+}

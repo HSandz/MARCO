@@ -1,0 +1,14 @@
+{
+    "analyst_base_prompt": {
+        "type": "template",
+        "content": "Analyze {analyse_type} {id} for {task_type}.\n\nCommands: UserInfo[id], ItemInfo[id], UserHistory[id], ItemHistory[id], Finish[result]\nGather comprehensive information, avoid duplicates, then Finish.\n\nTarget: {analyse_type} {id}\n{history}"
+    },
+    "analyst_prompt_json": {
+        "type": "template", 
+        "content": "{analyst_base_prompt}\n\nJSON format: {{\"type\":\"CommandName\",\"content\":value}}\nExamples: {{\"type\":\"UserInfo\",\"content\":123}}, {{\"type\":\"Finish\",\"content\":\"User 123 likes anime and action movies\"}}\nIMPORTANT: \n- Generate ONE command at a time, not arrays\n- Never repeat the same command\n- Finish content must be SIMPLE TEXT STRING only\nCommand: "
+    },
+    "analyst_hint": {
+        "type": "raw",
+        "content": "Use Finish to complete analysis."
+    }
+}
