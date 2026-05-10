@@ -127,7 +127,7 @@ class Planner(Agent):
                 'kwargs': kwargs
             })
             
-            logger.debug(f"Generated plan for {task}: {plan}")
+            logger.info(f"Generated plan for {task}: {plan}")
             return plan
             
         except Exception as e:

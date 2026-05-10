@@ -200,11 +200,6 @@ class EvaluateTask(GenerationTask):
                         break
                 
                 if log_file_path:
-                    is_debug_enabled = any(
-                        handler._levelno <= 10
-                        for handler in logger._core.handlers.values()
-                    )
-                    
                     with open(log_file_path, 'a', encoding='utf-8') as log_file:
                         sorted_positions = sorted(self.gt_positions, key=lambda x: (x['position'] == -1, x['position']))
 
@@ -226,30 +221,29 @@ class EvaluateTask(GenerationTask):
                         if skipped_no_gt_count > 0:
                             log_file.write(f"Ground Truth Not in Candidates (Auto-Fail): {skipped_no_gt_count}/{len(self.gt_positions)} samples\n")
 
-                        if is_debug_enabled:
-                            log_file.write("\nDetailed Ground Truth Positions (sorted by position):\n")
-                            log_file.write(f"{'Sample':<8} {'User':<8} {'GT Item':<10} {'Position':<10} {'List Length':<12} {'Status':<15}\n")
-                            log_file.write("-" * 75 + "\n")
+                        log_file.write("\nDetailed Ground Truth Positions (sorted by position):\n")
+                        log_file.write(f"{'Sample':<8} {'User':<8} {'GT Item':<10} {'Position':<10} {'List Length':<12} {'Status':<15}\n")
+                        log_file.write("-" * 75 + "\n")
 
-                            for pos_info in sorted_positions:
-                                if pos_info.get('skipped_no_gt', False):
-                                    position_str = "N/A"
-                                    status_str = "GT Not in Cand"
-                                elif pos_info['position'] > 0:
-                                    position_str = str(pos_info['position'])
-                                    status_str = "Found"
-                                else:
-                                    position_str = "Not Found"
-                                    status_str = "Not in Output"
+                        for pos_info in sorted_positions:
+                            if pos_info.get('skipped_no_gt', False):
+                                position_str = "N/A"
+                                status_str = "GT Not in Cand"
+                            elif pos_info['position'] > 0:
+                                position_str = str(pos_info['position'])
+                                status_str = "Found"
+                            else:
+                                position_str = "Not Found"
+                                status_str = "Not in Output"
 
-                                log_file.write(
-                                    f"{pos_info['sample_id']:<8} "
-                                    f"{pos_info['user_id']:<8} "
-                                    f"{pos_info['gt_item']:<10} "
-                                    f"{position_str:<10} "
-                                    f"{pos_info['list_length']:<12} "
-                                    f"{status_str:<15}\n"
-                                )
+                            log_file.write(
+                                f"{pos_info['sample_id']:<8} "
+                                f"{pos_info['user_id']:<8} "
+                                f"{pos_info['gt_item']:<10} "
+                                f"{position_str:<10} "
+                                f"{pos_info['list_length']:<12} "
+                                f"{status_str:<15}\n"
+                            )
         
         if hasattr(self.system, 'reflection_all_reruns') and self.system.reflection_all_reruns:
             if hasattr(self, 'log_handler_id') and self.log_handler_id is not None:
@@ -263,11 +257,6 @@ class EvaluateTask(GenerationTask):
                         break
                 
                 if log_file_path:
-                    is_debug_enabled = any(
-                        handler._levelno <= 10
-                        for handler in logger._core.handlers.values()
-                    )
-                    
                     with open(log_file_path, 'a', encoding='utf-8') as log_file:
                         all_reruns = self.system.reflection_all_reruns
                         improvements = self.system.reflection_improvements if hasattr(self.system, 'reflection_improvements') else []
@@ -295,45 +284,44 @@ class EvaluateTask(GenerationTask):
                             log_file.write(f"  Solver only (reranking):          {len(solver_only)} samples | {count_improvements(solver_only)} improved\n")
                             log_file.write(f"  Both agents (full rerun):         {len(both_agents)} samples | {count_improvements(both_agents)} improved\n")
                             
-                            if is_debug_enabled:
-                                log_file.write("\nDETAILED BREAKDOWN:\n")
-                                log_file.write("All Reflection Reruns (sorted by improvement, positive = improved, negative = worsened):\n")
-                                log_file.write(f"{'Sample':<8} {'User':<8} {'GT Item':<10} {'Before':<8} {'After':<8} {'Delta':<8} {'Feedback Type':<18}\n")
-                                log_file.write("-" * 80 + "\n")
-                                
-                                sorted_reruns = sorted(all_reruns, key=lambda x: x['position_before'] - x['position_after'], reverse=True)
-                                
-                                for rerun_info in sorted_reruns:
-                                    improvement = rerun_info['position_before'] - rerun_info['position_after']
-                                    feedback_type = rerun_info.get('feedback_type', 'unknown')
-                                    
-                                    if improvement > 0:
-                                        improvement_str = f"+{improvement}"
-                                    elif improvement < 0:
-                                        improvement_str = f"{improvement}"
-                                    else:
-                                        improvement_str = "0"
-                                    
-                                    if feedback_type == 'planner':
-                                        feedback_str = "Planner (Full)"
-                                    elif feedback_type == 'solver':
-                                        feedback_str = "Solver (Rerank)"
-                                    elif feedback_type == 'both':
-                                        feedback_str = "Both (Full)"
-                                    else:
-                                        feedback_str = "Unknown"
-                                    
-                                    sample_num = rerun_info['sample_idx']
-                                    
-                                    log_file.write(
-                                        f"{sample_num:<8} "
-                                        f"{rerun_info['user_id']:<8} "
-                                        f"{rerun_info['gt_item']:<10} "
-                                        f"{rerun_info['position_before']:<8} "
-                                        f"{rerun_info['position_after']:<8} "
-                                        f"{improvement_str:<8} "
-                                        f"{feedback_str:<18}\n"
-                                    )
+                            log_file.write("\nDETAILED BREAKDOWN:\n")
+                            log_file.write("All Reflection Reruns (sorted by improvement, positive = improved, negative = worsened):\n")
+                            log_file.write(f"{'Sample':<8} {'User':<8} {'GT Item':<10} {'Before':<8} {'After':<8} {'Delta':<8} {'Feedback Type':<18}\n")
+                            log_file.write("-" * 80 + "\n")
+
+                            sorted_reruns = sorted(all_reruns, key=lambda x: x['position_before'] - x['position_after'], reverse=True)
+
+                            for rerun_info in sorted_reruns:
+                                improvement = rerun_info['position_before'] - rerun_info['position_after']
+                                feedback_type = rerun_info.get('feedback_type', 'unknown')
+
+                                if improvement > 0:
+                                    improvement_str = f"+{improvement}"
+                                elif improvement < 0:
+                                    improvement_str = f"{improvement}"
+                                else:
+                                    improvement_str = "0"
+
+                                if feedback_type == 'planner':
+                                    feedback_str = "Planner (Full)"
+                                elif feedback_type == 'solver':
+                                    feedback_str = "Solver (Rerank)"
+                                elif feedback_type == 'both':
+                                    feedback_str = "Both (Full)"
+                                else:
+                                    feedback_str = "Unknown"
+
+                                sample_num = rerun_info['sample_idx']
+
+                                log_file.write(
+                                    f"{sample_num:<8} "
+                                    f"{rerun_info['user_id']:<8} "
+                                    f"{rerun_info['gt_item']:<10} "
+                                    f"{rerun_info['position_before']:<8} "
+                                    f"{rerun_info['position_after']:<8} "
+                                    f"{improvement_str:<8} "
+                                    f"{feedback_str:<18}\n"
+                                )
 
     def run(self, steps: int, topks: list[int], *args, **kwargs):
         assert kwargs['task'] in ['rp', 'sr'], "Only support rating (rp) and ranking (sr) tasks."

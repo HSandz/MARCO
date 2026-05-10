@@ -34,4 +34,6 @@ recommender/logs/
 recommender/checkpoints/
 recommender/candidates/
 
+data/Electronics/
+
 vertex-service-account.json

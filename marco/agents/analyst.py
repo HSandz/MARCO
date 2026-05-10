@@ -432,13 +432,15 @@ class Analyst(ToolAgent):
                 finish_content = ', '.join(str(item) for item in argument)
             else:
                 finish_content = str(argument) if argument is not None else "Analysis completed"
-            
+
             detailed_analysis = self._generate_detailed_analysis(finish_content)
             observation = self.finish(results=detailed_analysis)
             log_head = ':violet[Finish with results]:\n- '
+            logger.info(f'Observation: {observation}')
         else:
             observation = f'Unknown command type: {action_type}.'
-        logger.debug(f'Observation: {observation}')
+            if action_type.lower() != 'finish':
+                logger.debug(f'Observation: {observation}')
         self.observation(observation, log_head)
         turn = {
             'command': command,
