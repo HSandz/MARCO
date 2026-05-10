@@ -4,7 +4,7 @@ from loguru import logger
 from typing import Any, Optional, TYPE_CHECKING
 from langchain.prompts import PromptTemplate
 
-from marco.llms import BaseLLM, GeminiLLM, OpenRouterLLM, OpenAILLM, OllamaLLM, HuggingFaceLLM
+from marco.llms import BaseLLM, GeminiLLM, VertexAILLM, OpenRouterLLM, OpenAILLM, OllamaLLM, HuggingFaceLLM
 from marco.tools import TOOL_MAP, Tool
 from marco.utils import run_once, format_history, read_prompts, duration_tracker
 
@@ -105,6 +105,8 @@ class Agent(ABC):
         
         if provider == 'gemini':
             return GeminiLLM(**config)
+        elif provider == 'vertexai':
+            return VertexAILLM(**config)
         elif provider == 'openrouter':
             return OpenRouterLLM(**config)
         elif provider == 'openai':
@@ -115,7 +117,7 @@ class Agent(ABC):
             return HuggingFaceLLM(**config)
         else:
             raise ValueError(
-                f"Unsupported provider: {provider}. Supported providers are 'gemini', 'openrouter', 'openai', 'ollama', and 'huggingface'."
+                f"Unsupported provider: {provider}. Supported providers are 'gemini', 'vertexai', 'openrouter', 'openai', 'ollama', and 'huggingface'."
             )
 
 class ToolAgent(Agent):

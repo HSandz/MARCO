@@ -18,6 +18,11 @@
             ],
             "base_url": "https://generativelanguage.googleapis.com/v1beta/models"
         },
+        "vertexai": {
+            "project_id": "your-gcp-project-id",
+            "location": "global",
+            "credentials_path": "config/vertex-service-account.json"
+        },
         "ollama": {
             "base_url": "http://localhost:11434"
         },

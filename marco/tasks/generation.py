@@ -302,7 +302,8 @@ class GenerationTask(Task):
                 'openrouter': 'google/gemini-2.0-flash-001',
                 'openai': 'gpt-4o-mini',
                 'ollama': 'llama3.2:1b',
-                'gemini': 'google/gemini-2.0-flash-001'
+                'gemini': 'google/gemini-2.0-flash-001',
+                'vertexai': 'gemini-2.0-flash-001'
             }
             return default_map.get(provider_name, 'google/gemini-2.0-flash-001')
 

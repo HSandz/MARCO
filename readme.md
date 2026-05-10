@@ -91,6 +91,11 @@ Edit `config/api-config.json` with your API keys:
             "api_key": ["YOUR_KEY"],
             "base_url": "https://generativelanguage.googleapis.com/v1beta/models"
         },
+        "vertexai": {
+            "project_id": "YOUR_GCP_PROJECT_ID",
+            "location": "us-central1",
+            "credentials_path": "config/vertex-service-account.json"
+        },
         "openrouter": {
             "api_key": ["YOUR_KEY"],
             "base_url": "https://openrouter.ai/api/v1/chat/completions"
@@ -145,6 +150,7 @@ python main.py --main Test --data_file data/ml-100k/test.csv --system marco --sy
 
 **Available Providers:**
 - `gemini`: Google Gemini
+- `vertexai`: Vertex AI Gemini
 - `openrouter`: 200+ models via OpenRouter
 - `openai`: OpenAI models
 - `ollama`: Local inference

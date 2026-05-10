@@ -5,6 +5,8 @@ from typing import Dict, Iterator, Tuple
 import numpy as np
 from loguru import logger
 
+VERTEX_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
+
 def _normalize_provider_name(value: str | None) -> str:
     return (value or '').strip().lower()
 
@@ -102,6 +104,44 @@ def init_gemini_api(api_key: str):
             "google-generativeai package is required for Gemini API. Install it with: pip install google-generativeai"
         ) from exc
 
+def init_vertexai_api(project_id: str, location: str = 'global', credentials_path: str | None = None):
+    if not project_id:
+        raise ValueError("Vertex AI project_id cannot be empty")
+
+    if not credentials_path:
+        default_sa_path = 'config/vertex-service-account.json'
+        if os.path.exists(default_sa_path):
+            credentials_path = default_sa_path
+            logger.debug(f"Auto-detected Vertex AI service account at {default_sa_path}")
+
+    if credentials_path:
+        if os.path.exists(credentials_path):
+            logger.info(f"Using Vertex AI service account: {credentials_path}")
+        else:
+            logger.warning(f"Credentials file not found at {credentials_path}, will use Application Default Credentials")
+
+    try:
+        from google import genai
+        from google.oauth2 import service_account
+
+        credentials = None
+        if credentials_path and os.path.exists(credentials_path):
+            credentials = service_account.Credentials.from_service_account_file(
+                credentials_path,
+                scopes=VERTEX_SCOPES,
+            )
+
+        genai.Client(
+            vertexai=True,
+            project=project_id,
+            location=location,
+            credentials=credentials,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            "google-genai package is required for Vertex AI. Install it with: pip install google-genai"
+        ) from exc
+
 def init_openrouter_api(api_key: str):
     if not api_key:
         raise ValueError("OpenRouter API key cannot be empty")
@@ -170,6 +210,15 @@ def init_api(api_config: dict):
                     initialized = True
                 else:
                     logger.info("Skip Gemini provider: api_key is empty.")
+        elif provider == 'vertexai':
+            project_id = provider_cfg.get('project_id') or provider_cfg.get('project')
+            location = provider_cfg.get('location', 'us-central1')
+            credentials_path = provider_cfg.get('credentials_path')
+            if project_id:
+                init_vertexai_api(project_id=project_id, location=location, credentials_path=credentials_path)
+                initialized = True
+            else:
+                logger.info("Skip Vertex AI provider: project_id is empty.")
         elif provider == 'ollama':
             base_url = provider_cfg.get('base_url')
             if base_url:

@@ -133,6 +133,8 @@ class System(ABC):
                     logger.warning("Gemini API key not found in config")
             except Exception as e:
                 logger.warning(f"Could not read API config for Gemini model override: {e}")
+        elif self.provider == 'vertexai':
+            logger.info(f"Using Vertex AI Gemini model: {self.model_override}")
         else:
             logger.warning(f"Unknown provider: {self.provider}")
         
