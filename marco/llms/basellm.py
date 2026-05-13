@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Callable
 from loguru import logger
+from contextlib import contextmanager
+import signal
 import time
 import requests
 
@@ -16,6 +18,7 @@ class BaseLLM(ABC):
         self.call_history: list = []
         self.max_retries: int = 3
         self.retry_delay_base: int = 1
+        self.request_timeout_seconds: int = 120
         self.enable_prompt_logging: bool = True
 
     @property
@@ -104,12 +107,34 @@ class BaseLLM(ABC):
         **kwargs
     ) -> Any:
         RETRIABLE_ERRORS = self._get_retriable_errors()
+        timeout_seconds = kwargs.pop('timeout_seconds', getattr(self, 'request_timeout_seconds', 120))
         
         last_exception = None
+
+        @contextmanager
+        def _timeout_guard(seconds: int):
+            if seconds <= 0 or not hasattr(signal, 'SIGALRM'):
+                yield
+                return
+
+            def _handle_timeout(signum, frame):
+                raise TimeoutError(f"Request exceeded time limit of {seconds} seconds")
+
+            previous_handler = signal.signal(signal.SIGALRM, _handle_timeout)
+            previous_timer = signal.setitimer(signal.ITIMER_REAL, seconds)
+
+            try:
+                yield
+            finally:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, previous_handler)
+                if previous_timer[0] > 0:
+                    signal.setitimer(signal.ITIMER_REAL, previous_timer[0], previous_timer[1])
         
         for attempt in range(self.max_retries):
             try:
-                result = api_call_func(*args, **kwargs)
+                with _timeout_guard(timeout_seconds):
+                    result = api_call_func(*args, **kwargs)
                 
                 if self._should_retry_response(result):
                     if attempt < self.max_retries - 1:

@@ -1,7 +1,5 @@
 import json
 import re
-import signal
-from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from loguru import logger
 import pandas as pd
@@ -306,41 +304,6 @@ class MARCOSystem(System):
     
     def _should_perform_reflection(self) -> tuple[bool, str]:
         return True, "Performing reflection on every sample for comprehensive quality assessment"
-
-    @contextmanager
-    def _reflection_timeout(self, timeout_seconds: int):
-        if timeout_seconds <= 0 or not hasattr(signal, 'SIGALRM'):
-            yield
-            return
-
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(f"Reflection exceeded {timeout_seconds} seconds")
-
-        previous_handler = signal.signal(signal.SIGALRM, _handle_timeout)
-        previous_timer = signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
-
-        try:
-            yield
-        finally:
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            signal.signal(signal.SIGALRM, previous_handler)
-            if previous_timer[0] > 0:
-                signal.setitimer(signal.ITIMER_REAL, previous_timer[0], previous_timer[1])
-
-    def _invoke_reflector_with_timeout(self, MARCO_process: str, timeout_seconds: int = 120) -> bool:
-        if not self.reflector:
-            return False
-
-        try:
-            with self._reflection_timeout(timeout_seconds):
-                with duration_tracker.track_agent_call('reflector'):
-                    self.reflector(input=self.input, scratchpad=MARCO_process)
-            return True
-        except TimeoutError:
-            logger.error(f"Reflection timed out after {timeout_seconds} seconds")
-            if hasattr(self.reflector, 'reset'):
-                self.reflector.reset()
-            return False
     
     def _perform_reflection(self) -> tuple[bool, dict]:
         if not self.reflector:
@@ -363,13 +326,8 @@ class MARCOSystem(System):
         if hasattr(self, 'planner_kwargs') and 'reflections' in self.planner_kwargs:
             MARCO_process += f"\n\nPrevious Reflection Comments:\n{self.planner_kwargs['reflections']}"
         
-        if not self._invoke_reflector_with_timeout(MARCO_process):
-            return False, {
-                'planner_correct': True,
-                'solver_correct': True,
-                'planner_reason': 'Reflection timed out',
-                'solver_reason': 'Reflection timed out'
-            }
+        with duration_tracker.track_agent_call('reflector'):
+            self.reflector(input=self.input, scratchpad=MARCO_process)
         
         feedback_info = {
             'planner_correct': True,
@@ -492,8 +450,8 @@ class MARCOSystem(System):
         else:
             MARCO_process = self._build_basic_MARCO_scratchpad()
         
-        if not self._invoke_reflector_with_timeout(MARCO_process):
-            return
+        with duration_tracker.track_agent_call('reflector'):
+            self.reflector(input=self.input, scratchpad=MARCO_process)
         
         if self.reflector.json_mode and self.reflector.reflections:
             try:
