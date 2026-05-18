@@ -143,6 +143,7 @@ class VertexAILLM(BaseLLM):
             return base_errors + (
                 httpx.TimeoutException,
                 httpx.ConnectError,
+                httpx.RemoteProtocolError,
                 self._genai_errors.APIError,
             )
         except Exception:
@@ -156,7 +157,7 @@ class VertexAILLM(BaseLLM):
         try:
             import httpx
 
-            if isinstance(exception, (httpx.TimeoutException, httpx.ConnectError)):
+            if isinstance(exception, (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError)):
                 return True
         except Exception:
             pass

@@ -189,9 +189,14 @@ class BaseLLM(ABC):
     
     def _get_retriable_errors(self) -> tuple:
         try:
+            import httpx
+
             return (
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
+                httpx.TimeoutException,
+                httpx.ConnectError,
+                httpx.RemoteProtocolError,
                 ConnectionResetError,
                 ConnectionAbortedError,
                 BrokenPipeError,
@@ -214,6 +219,14 @@ class BaseLLM(ABC):
         return False
     
     def _is_retriable_exception(self, exception: Exception) -> bool:
+        try:
+            import httpx
+
+            if isinstance(exception, (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError)):
+                return True
+        except Exception:
+            pass
+
         if hasattr(exception, 'response') and hasattr(exception.response, 'status_code'):
             status_code = exception.response.status_code
             return status_code >= 500 or status_code == 429
