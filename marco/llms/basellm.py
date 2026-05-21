@@ -194,6 +194,7 @@ class BaseLLM(ABC):
             return (
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
+                httpx.TransportError,
                 httpx.TimeoutException,
                 httpx.ConnectError,
                 httpx.RemoteProtocolError,
@@ -222,7 +223,7 @@ class BaseLLM(ABC):
         try:
             import httpx
 
-            if isinstance(exception, (httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError)):
+            if isinstance(exception, (httpx.TransportError, httpx.TimeoutException, httpx.ConnectError, httpx.RemoteProtocolError)):
                 return True
         except Exception:
             pass
@@ -244,6 +245,11 @@ class BaseLLM(ABC):
             return ("TIMEOUT", f"Request exceeded time limit. {error_type}")
         
         try:
+            import httpx
+
+            if isinstance(exception, httpx.TransportError):
+                return ("CONNECTION_ERROR", f"Transport error while calling LLM. {error_type}: {error_str[:100]}")
+
             import requests
             
             if isinstance(exception, requests.exceptions.ConnectionError):

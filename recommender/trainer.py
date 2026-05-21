@@ -48,20 +48,21 @@ class Trainer:
     def evaluate(self, dataloader: DataLoader, user_history: Dict[int, List[int]],
                  k_list: List[int] = [5, 10, 20]) -> Dict[str, float]:
         self.model.eval()
-        
-        all_predictions = []
-        all_targets = []
-        all_user_ids = []
-        
+
+        max_k = max(k_list) if k_list else 0
+        hits = {k: 0 for k in k_list}
+        ndcg_sum = {k: 0.0 for k in k_list}
+        total_targets = 0
+
         for batch in dataloader:
             user_ids = batch['user_id']
-            
+
             if 'input_seq' in batch:
                 input_seqs = batch['input_seq'].to(self.model.device)
                 scores = self.model.predict(user_ids.to(self.model.device), input_seqs)
             else:
                 scores = self.model.predict(user_ids.to(self.model.device))
-            
+
             for i, uid in enumerate(user_ids.tolist()):
                 history = user_history.get(uid, [])
                 if history:
@@ -70,35 +71,35 @@ class Trainer:
                         valid_history = history_tensor[history_tensor < self.model.num_items]
                         if len(valid_history) > 0:
                             scores[i, valid_history] = float('-inf')
-            
-            all_predictions.append(scores.cpu())
-            
+
+            if max_k == 0:
+                continue
+
+            _, topk_indices = torch.topk(scores, max_k, dim=-1)
+            topk_indices = topk_indices.cpu().tolist()
+
             if 'target_item' in batch:
-                all_targets.extend(batch['target_item'].tolist())
+                targets = batch['target_item'].tolist()
             elif 'pos_item' in batch:
-                all_targets.extend(batch['pos_item'].tolist())
-            
-            all_user_ids.extend(user_ids.tolist())
-        
-        all_predictions = torch.cat(all_predictions, dim=0)
-        
+                targets = batch['pos_item'].tolist()
+            else:
+                targets = []
+
+            for i, target in enumerate(targets):
+                total_targets += 1
+                user_topk = topk_indices[i]
+                for k in k_list:
+                    topk_slice = user_topk[:k]
+                    if target in topk_slice:
+                        hits[k] += 1
+                        rank = topk_slice.index(target)
+                        ndcg_sum[k] += 1.0 / np.log2(rank + 2)
+
         metrics = {}
         for k in k_list:
-            _, topk_indices = torch.topk(all_predictions, k, dim=-1)
-            topk_indices = topk_indices.numpy()
-            
-            hits = 0
-            ndcg_sum = 0.0
-            
-            for i, target in enumerate(all_targets):
-                if target in topk_indices[i]:
-                    hits += 1
-                    rank = np.where(topk_indices[i] == target)[0][0]
-                    ndcg_sum += 1.0 / np.log2(rank + 2)
-            
-            metrics[f'HR@{k}'] = hits / len(all_targets) if all_targets else 0.0
-            metrics[f'NDCG@{k}'] = ndcg_sum / len(all_targets) if all_targets else 0.0
-        
+            metrics[f'HR@{k}'] = hits[k] / total_targets if total_targets else 0.0
+            metrics[f'NDCG@{k}'] = ndcg_sum[k] / total_targets if total_targets else 0.0
+
         return metrics
     
     def fit(self, train_loader: DataLoader, valid_loader: Optional[DataLoader] = None,

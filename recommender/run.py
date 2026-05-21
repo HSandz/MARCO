@@ -113,7 +113,7 @@ def main():
         
         if valid_df is not None:
             valid_dataset = BPRDataset(valid_df, num_items, user_history, num_negatives=1)
-            valid_loader = get_dataloader(valid_dataset, args.batch_size, shuffle=False)
+            valid_loader = get_dataloader(valid_dataset, min(args.batch_size, 256), shuffle=False)
         else:
             valid_loader = None
             
@@ -136,7 +136,7 @@ def main():
         if valid_df is not None:
             valid_sequences = build_sequences(train_df)
             valid_dataset = EvalDataset(valid_df, valid_sequences, args.max_seq_len)
-            valid_loader = get_dataloader(valid_dataset, args.batch_size, shuffle=False)
+            valid_loader = get_dataloader(valid_dataset, min(args.batch_size, 256), shuffle=False)
         else:
             valid_loader = None
             
@@ -161,7 +161,7 @@ def main():
         if valid_df is not None:
             valid_sequences = build_sequences(train_df)
             valid_dataset = EvalDataset(valid_df, valid_sequences, args.max_seq_len)
-            valid_loader = get_dataloader(valid_dataset, args.batch_size, shuffle=False)
+            valid_loader = get_dataloader(valid_dataset, min(args.batch_size, 256), shuffle=False)
         else:
             valid_loader = None
     
