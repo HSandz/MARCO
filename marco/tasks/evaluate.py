@@ -84,6 +84,17 @@ class EvaluateTask(GenerationTask):
                                 for key, value in metric_values.items():
                                     log_file.write(f"  {key}: {value:.4f}\n")
                         log_file.write("\n")
+
+                    self.cumulative_score_history.append({
+                        'sample_id': sample_id,
+                        'sample_count': self.total_count,
+                        'token_usage': {
+                            'input_tokens': total_input_tokens,
+                            'output_tokens': total_output_tokens,
+                            'total_tokens': total_tokens,
+                        },
+                        'metrics': self._json_safe(result),
+                    })
         except Exception as e:
             logger.warning(f"Failed to log cumulative scores: {e}")
 
@@ -101,6 +112,7 @@ class EvaluateTask(GenerationTask):
         self.failed_samples = []
         self.skipped_no_gt_samples = []
         self.gt_positions = []
+        self.cumulative_score_history = []
         
     def after_step(self, answer: Any, gt_answer: int | float | str, step: int, record: dict) -> None:
         record[f'Answer_{step}'] = answer
@@ -322,6 +334,33 @@ class EvaluateTask(GenerationTask):
                                     f"{improvement_str:<8} "
                                     f"{feedback_str:<18}\n"
                                 )
+
+    def build_result_payload(self, final_stats: dict[str, Any], duration_stats: dict[str, Any]) -> dict[str, Any]:
+        payload = super().build_result_payload(final_stats, duration_stats)
+
+        total_samples = self.total_count if self.total_count else len(getattr(self, 'sample_records', []))
+        valid_percentage = (self.valid_count / total_samples * 100) if total_samples > 0 else 0
+
+        payload['evaluation'] = {
+            'task': self.task,
+            'topks': self.topks,
+            'total_samples': total_samples,
+            'valid_samples': self.valid_count,
+            'valid_percentage': valid_percentage,
+            'failed_samples': self._json_safe(self.failed_samples),
+            'skipped_no_gt_samples': self._json_safe(self.skipped_no_gt_samples),
+            'gt_positions': self._json_safe(self.gt_positions),
+            'cumulative_scores': self._json_safe(getattr(self, 'cumulative_score_history', [])),
+            'metrics': self._json_safe(self.metrics.compute()),
+        }
+
+        payload['reflection'] = {
+            'total_reflections_triggered': getattr(self.system, 'total_reflections_triggered', 0),
+            'improvements': self._json_safe(getattr(self.system, 'reflection_improvements', [])),
+            'reruns': self._json_safe(getattr(self.system, 'reflection_all_reruns', [])),
+        }
+
+        return payload
 
     def run(self, steps: int, topks: list[int], *args, **kwargs):
         assert kwargs['task'] in ['rp', 'sr'], "Only support rating (rp) and ranking (sr) tasks."

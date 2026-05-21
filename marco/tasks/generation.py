@@ -123,6 +123,115 @@ class GenerationTask(Task):
         logger.info(f"Built {len(prompts)} prompts")
         return prompts
 
+    def _json_safe(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {str(key): self._json_safe(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._json_safe(item) for item in value]
+        if isinstance(value, tuple):
+            return [self._json_safe(item) for item in value]
+        if isinstance(value, set):
+            return [self._json_safe(item) for item in sorted(value, key=lambda item: str(item))]
+        if isinstance(value, pd.Series):
+            return self._json_safe(value.to_dict())
+        if hasattr(value, 'item') and callable(getattr(value, 'item')):
+            try:
+                return value.item()
+            except Exception:
+                pass
+        return value
+
+    def _build_agent_inventory(self) -> dict[str, Any]:
+        inventory: dict[str, Any] = {}
+        if not hasattr(self, 'system') or not hasattr(self.system, 'agent_coordinator'):
+            return inventory
+
+        agents = getattr(self.system.agent_coordinator, 'agents', {})
+        for agent_name, agent in agents.items():
+            llm_instances = {}
+            if hasattr(agent, 'get_llm_instances'):
+                for llm_name, llm in agent.get_llm_instances().items():
+                    llm_instances[llm_name] = self._json_safe({
+                        'class_name': llm.__class__.__name__,
+                        'model': getattr(llm, 'model', None),
+                        'usage': llm.get_usage_stats() if hasattr(llm, 'get_usage_stats') else {},
+                        'detailed_usage': llm.get_detailed_usage_stats() if hasattr(llm, 'get_detailed_usage_stats') else {},
+                    })
+
+            inventory[agent_name] = self._json_safe({
+                'class_name': agent.__class__.__name__,
+                'llms': llm_instances,
+            })
+
+        return inventory
+
+    def _build_sample_result(self, record: dict, gt_answer: int | float | str, data_sample: pd.Series, prompt: str) -> dict[str, Any]:
+        sample_result: dict[str, Any] = {
+            'sample_id': record.get('sample_id'),
+            'user_id': record.get('user_id', 'unknown'),
+            'ground_truth': self._json_safe(gt_answer),
+            'prompt': prompt,
+            'skipped_no_gt': record.get('_skipped_no_gt', False),
+            'system_finished': record.get('System_Finished', False),
+            'steps': {key: self._json_safe(value) for key, value in record.items() if key.startswith('Answer_')},
+            'data_sample': self._json_safe(data_sample.to_dict()) if hasattr(data_sample, 'to_dict') else self._json_safe(data_sample),
+        }
+
+        if hasattr(self.system, 'solver_attempt_history'):
+            sample_result['solver_attempts'] = self._json_safe(self.system.solver_attempt_history)
+        if hasattr(self.system, 'reflection_all_reruns'):
+            sample_result['reflection_reruns'] = self._json_safe(self.system.reflection_all_reruns)
+        if hasattr(self.system, 'reflection_improvements'):
+            sample_result['reflection_improvements'] = self._json_safe(self.system.reflection_improvements)
+        if hasattr(self.system, 'total_reflections_triggered'):
+            sample_result['total_reflections_triggered'] = self.system.total_reflections_triggered
+
+        sample_result['final_answer'] = self._json_safe(self.system.answer)
+        sample_result['final_answer_type'] = type(self.system.answer).__name__
+
+        return sample_result
+
+    def build_result_payload(self, final_stats: dict[str, Any], duration_stats: dict[str, Any]) -> dict[str, Any]:
+        task_info = final_stats.get('task_info', {}) if isinstance(final_stats, dict) else {}
+        run_args = self._json_safe({
+            'api_config': getattr(self, 'args', {}).api_config if getattr(self, 'args', None) else None,
+            'dataset': getattr(self, 'dataset', None),
+            'data_file': getattr(self, 'data_file', None),
+            'system': getattr(self, 'system', None).__class__.__name__ if hasattr(self, 'system') and self.system else None,
+            'system_config': getattr(self, 'args', {}).system_config if getattr(self, 'args', None) else None,
+            'task': getattr(self, 'task', None),
+            'max_his': getattr(self, 'max_his', None),
+            'provider': getattr(self, 'provider', None),
+            'model_override': getattr(self, 'model_override', None),
+            'enable_reflection_rerun': getattr(self, 'args', {}).enable_reflection_rerun if getattr(self, 'args', None) else None,
+            'steps': getattr(self, 'steps', None),
+            'topks': getattr(self, 'topks', None),
+            'num_samples': len(getattr(self, 'sample_records', [])),
+        })
+
+        payload: dict[str, Any] = {
+            'run_info': {
+                'task_id': getattr(self, 'task_id', None),
+                'timestamp': task_info.get('start_time'),
+                'task_info': self._json_safe(task_info),
+                'config': run_args,
+                'log_file': os.path.abspath(getattr(self, 'log_path', '')) if getattr(self, 'log_path', None) else None,
+                'result_file': os.path.abspath(getattr(self, 'result_path', '')) if getattr(self, 'result_path', None) else None,
+            },
+            'data': {
+                'dataset': getattr(self, 'dataset', None),
+                'data_file': getattr(self, 'data_file', None),
+                'task': getattr(self, 'task', None),
+                'system': getattr(self, 'system', None).__class__.__name__ if hasattr(self, 'system') and self.system else None,
+            },
+            'agents': self._build_agent_inventory(),
+            'samples': self._json_safe(getattr(self, 'sample_records', [])),
+            'token_stats': self._json_safe(final_stats),
+            'duration_stats': self._json_safe(duration_stats),
+        }
+
+        return payload
+
     def get_system(self, system: str, system_config: str):
         if system == 'marco':
             self.system = MARCOSystem(config_path=system_config, **self.system_kwargs)
@@ -152,6 +261,7 @@ class GenerationTask(Task):
 
     def generate(self, data: list[tuple[str, int | float | str, pd.Series]], steps: int = 2):
         task_id = f"{self.dataset}_{self.task}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        self.task_id = task_id
         task_info = {
             'dataset': self.dataset,
             'task': self.task,
@@ -164,6 +274,8 @@ class GenerationTask(Task):
 
         token_tracker.start_task(task_id, task_info)
         duration_tracker.start_task(task_id, task_info)
+
+        self.sample_records = []
 
         token_tracker.reset_agent_stats(self.system)
 
@@ -181,6 +293,7 @@ class GenerationTask(Task):
 
                 if gt_not_in_candidates:
                     logger.info(f"Sample {sample_id}: GT item not in candidates - skipping system call, counting as automatic failure")
+                    self.system.reset(clear=True)
                     if self.task == 'sr':
                         answer = []
                     else:
@@ -206,10 +319,14 @@ class GenerationTask(Task):
                     token_tracker.collect_system_stats(self.system)
 
                 self.after_iteration(answer=self.system.answer, gt_answer=gt_answer, record=record, pbar=pbar)
+                self.sample_records.append(self._build_sample_result(record, gt_answer, data_sample, test_data))
                 pbar.update(1)
                 
         final_stats = token_tracker.end_task()
         duration_stats = duration_tracker.end_task()
+
+        self.final_stats = final_stats
+        self.duration_stats = duration_stats
         
         logger.success("=== Token Usage Summary ===")
         logger.success(f"Task: {self.dataset} {self.task} ({len(data)} samples)")
@@ -246,6 +363,9 @@ class GenerationTask(Task):
                     logger.success(f"  Average duration per call: {duration_info.get('avg_duration_per_call', 0):.3f}s")
         
         self.after_generate()
+
+        result_payload = self.build_result_payload(final_stats, duration_stats)
+        self.save_result_payload(result_payload)
 
     def run(self, api_config: str, dataset: str, data_file: str, system: str, system_config: str, task: str, max_his: int, provider: str = None, model: str = None, enable_reflection_rerun: bool = True):
         if dataset == 'None':

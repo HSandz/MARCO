@@ -51,6 +51,8 @@ class MARCOSystem(System):
         self.reflection_improvements = []
         self.reflection_all_reruns = []
         self.total_reflections_triggered = 0
+        self.solver_attempt_history = []
+        self._solver_attempt_counter = 0
         
         self._current_sample_idx = -1
         self._current_user_id = -1
@@ -95,10 +97,14 @@ class MARCOSystem(System):
             self.execution_results.clear()
             self.current_plan = None
             self.plan_steps = []
+            self.solver_attempt_history = []
+            self._solver_attempt_counter = 0
             if hasattr(self, '_last_solution'):
                 delattr(self, '_last_solution')
             if hasattr(self, '_last_final_answer'):
                 delattr(self, '_last_final_answer')
+            if hasattr(self, '_answer_before_reflection'):
+                delattr(self, '_answer_before_reflection')
             if hasattr(self, 'planner_kwargs'):
                 self.planner_kwargs['reflections'] = ""
             if hasattr(self, 'manager_kwargs'):
@@ -131,6 +137,22 @@ class MARCOSystem(System):
         self.step_n = 1
         self.phase = 'planning'
         self._execution_errors = []
+
+    def _append_solver_attempt(self, stage: str, answer: Any, position: int, feedback_type: str | None = None) -> None:
+        attempt = {
+            'attempt_index': len(self.solver_attempt_history) + 1,
+            'stage': stage,
+            'sample_idx': getattr(self, '_current_sample_idx', -1),
+            'user_id': getattr(self, '_current_user_id', -1),
+            'ground_truth': getattr(self, 'gt_answer', None),
+            'ground_truth_position': position,
+            'answer': answer.copy() if isinstance(answer, list) else answer,
+        }
+
+        if feedback_type is not None:
+            attempt['feedback_type'] = feedback_type
+
+        self.solver_attempt_history.append(attempt)
 
     def forward(self, user_input: Optional[str] = None, reset: bool = True) -> Any:
         try:
@@ -230,6 +252,8 @@ class MARCOSystem(System):
                         'gt_item': gt_item,
                         'position_before': position_before,
                         'position_after': position_after,
+                        'answer_before': self._answer_before_reflection.copy() if isinstance(self._answer_before_reflection, list) else self._answer_before_reflection if hasattr(self, '_answer_before_reflection') else None,
+                        'answer_after': self.answer.copy() if isinstance(self.answer, list) else self.answer,
                         'feedback_type': 'both' if (not planner_correct and not solver_correct) else ('planner' if not planner_correct else 'solver')
                     }
                     self.reflection_all_reruns.append(rerun_info)
@@ -623,6 +647,10 @@ class MARCOSystem(System):
         self._gt_position_before_reflection = self._get_ground_truth_position(final_answer)
         
         self._answer_before_reflection = final_answer.copy() if isinstance(final_answer, list) else final_answer
+
+        self._solver_attempt_counter += 1
+        attempt_stage = 'initial_solution' if self._solver_attempt_counter == 1 else f'reflection_solution_{self._solver_attempt_counter - 1}'
+        self._append_solver_attempt(attempt_stage, final_answer, self._gt_position_before_reflection)
         
         logger.info(f"Final Answer: {final_answer} | Ground Truth: {self.gt_answer}")
         if self._gt_position_before_reflection > 0:
@@ -727,6 +755,8 @@ class MARCOSystem(System):
 
         self._last_solution = reranked_solution
         self._last_final_answer = reranked_answer
+        self._solver_attempt_counter += 1
+        self._append_solver_attempt('solver_rerank', reranked_answer, self._get_ground_truth_position(reranked_answer), feedback_type='solver')
         
         return reranked_answer
 

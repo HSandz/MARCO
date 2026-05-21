@@ -59,7 +59,8 @@ MARCO/
 │   ├── models/                 # LightGCN, SASRec, BERT4Rec
 │   └── run.py                  # Training script
 ├── data/                       # Datasets
-└── logs/                       # Execution logs
+├── logs/                       # Execution logs
+└── results/                    # Structured JSON run results
 ```
 
 ---
@@ -204,10 +205,14 @@ python -m recommender.run --model bert4rec --data data/ml-100k/all.csv --epochs 
 
 **Logs:** Saved to `logs/` with pattern:
 ```
-{task}_{dataset}_{system}_{samples}_{timestamp}.txt
+{task}_{dataset}_{system}_{samples}_{timestamp}.log
 ```
 
-**Results:** Includes metrics, token usage, and sample-level outputs
+**Results:** Saved to `results/` as JSON with the same base filename. Each file includes:
+- run metadata, data file, and task configuration
+- full metric summary, cumulative evaluation snapshots, runtime, token/API usage
+- per-agent token/API usage and model details
+- per-sample outputs, including solver ranked lists and reflection reruns
 
 ---
 
