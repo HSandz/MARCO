@@ -1,0 +1,4 @@
+{
+    "description": "Retrieves candidate items for recommendation tasks from the data file",
+    "note": "Use dataset-specific configs in retriever/{dataset}.json for proper path configuration"
+}

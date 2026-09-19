@@ -1,0 +1,9 @@
+{
+    "supported_tasks": [
+        "rp",
+        "sr"
+    ],
+    "llm_config_path": "config/agents/single.json",
+    "data_prompt": "config/prompts/data_prompt/{task}_single.json",
+    "max_step": 1
+}

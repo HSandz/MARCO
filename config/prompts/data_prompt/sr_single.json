@@ -1,0 +1,10 @@
+{
+    "data_prompt": {
+        "type": "template",
+        "content": "Task: Sequential Recommendation\n\nUser ID: {user_id}\nUser profile:\n{user_profile}\nHistorical interactions:\n{history}\nCandidate item attributes:\n{candidate_item_attributes}\n\nReturn valid JSON only in this format:\n{{\"ranked_items\": [item_id1, item_id2, ...], \"reasoning\": \"brief explanation\"}}\n\nRequirements:\n- Include every candidate item ID exactly once in ranked_items.\n- Do not include IDs outside the candidate list.\n- Keep reasoning brief."
+    },
+    "finish": {
+        "type": "raw",
+        "content": ""
+    }
+}
