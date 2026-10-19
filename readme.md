@@ -2,7 +2,7 @@
 
 **Code for the paper:** *Fewer Tokens, Smaller Agents: Role-Aware Allocation for Efficient Multi-Agent Recommendation*
 
-**Submitted to SOICT 2026**
+**Accepted at SOICT 2026**
 
 MARCO is a multi-agent recommendation framework that coordinates specialized agents (Planner, Analyst, Solver, and optional Reflector) through structured Plan-Work-Solve reasoning for rating prediction and sequential recommendation.
 
