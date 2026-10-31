@@ -1,0 +1,41 @@
+{
+    "providers": {
+        "openrouter": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://openrouter.ai/api/v1/chat/completions"
+        },
+        "openai": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://api.openai.com/v1/"
+        },
+        "codexhub": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://api.codexhub.click/v1",
+            "model": "oc/deepseek-v4-flash-free"
+        },
+        "gemini": {
+            "api_key": [
+                ""
+            ],
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/models"
+        },
+        "vertexai": {
+            "api_key": "",
+            "project_id": "your-gcp-project-id",
+            "location": "global",
+            "credentials_path": "config/vertex-service-account.json"
+        },
+        "ollama": {
+            "base_url": "http://localhost:11434"
+        },
+        "huggingface": {
+            "token": ""
+        }
+    }
+}

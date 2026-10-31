@@ -1,0 +1,4 @@
+{
+    "item_info": "data/Beauty/item.csv",
+    "description": "Retrieves candidate items for recommendation tasks from the data file"
+}

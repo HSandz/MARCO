@@ -1,0 +1,10 @@
+{
+    "data_prompt": {
+        "type": "template",
+        "content": "Task: Rating Prediction\n\nUser ID: {user_id}\nUser profile:\n{user_profile}\nHistorical interactions:\n{history}\nTarget item ID: {target_item_id}\nTarget item attributes:\n{target_item_attributes}\n\nReturn valid JSON only in this format:\n{{\"predicted_rating\": 0.0, \"reasoning\": \"brief explanation\"}}\n\nRequirements:\n- predicted_rating must be a number between 1.0 and 5.0.\n- Keep reasoning brief."
+    },
+    "finish": {
+        "type": "raw",
+        "content": ""
+    }
+}

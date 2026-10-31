@@ -1,0 +1,22 @@
+{
+    "reflect_prompt_json": {
+        "type": "template", 
+        "content": "Evaluate the process and identify critical failures only.\n\nPlanner Evaluation - Mark correctness as false if:\n- Missing user analysis step\n- Missing candidate retrieval step\n- Using non-existent worker types\n- Plan structure is fundamentally broken\n\nSolver Evaluation - Mark correctness as false if:\n- Ranking contains item IDs not in candidate list\n- Ranking is completely illogical with no preference matching\n- Missing items from the required ranking\n- Clear contradictions (e.g., user dislikes genre but ranked first)\n\nOtherwise, mark correctness as true. Return ONLY JSON.\n\n{examples}\nProcess:\n{input}{scratchpad}\n\nJSON Response:"
+    },
+    "reflect_examples_json": {
+        "type": "raw",
+        "content": "Example 1 (acceptable): `{\"Planner\": {\"correctness\": true, \"reason\": \"Plan covers user analysis, retrieval, and item analysis - complete structure.\"}, \"Solver\": {\"correctness\": true, \"reason\": \"Ranking uses correct items and shows logical preference matching.\"}}`\n\nExample 2 (missing critical step): `{\"Planner\": {\"correctness\": false, \"reason\": \"Plan missing user analysis step - cannot proceed without user understanding.\"}, \"Solver\": {\"correctness\": true, \"reason\": \"Ranking structure is sound.\"}}`\n\nExample 3 (wrong items): `{\"Planner\": {\"correctness\": true, \"reason\": \"Plan structure is complete.\"}, \"Solver\": {\"correctness\": false, \"reason\": \"Ranking contains item IDs not in candidate list [123, 456] - candidates were [789, 101].\"}}`"
+    },
+    "reflection_header": {
+        "type": "raw",
+        "content": "Previous reflection(s) identified areas for improvement. Use this feedback to enhance the reasoning process.\n"
+    },
+    "last_trial_header": {
+        "type": "raw",
+        "content": "Below is the complete process from the last trial.\n"
+    },
+    "reflection_last_trial_header": {
+        "type": "raw", 
+        "content": "Previous reflection(s) provide feedback on the three-phase reasoning process. Use this analysis to improve future executions.\n"
+    }
+}

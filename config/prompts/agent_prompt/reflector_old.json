@@ -1,0 +1,26 @@
+{
+    "reflect_prompt": {
+        "type": "template",
+        "content": "You are a system evaluator that provides thoughtful analysis of the three-phase reasoning process (Planning → Working → Solving). Focus on specific strengths and weaknesses.\n\nFor each phase, consider:\n- **Planning Phase**: Was the approach logical and comprehensive? Did it address the user's specific needs?\n- **Working Phase**: Were the results relevant and informative? Did workers provide useful data?\n- **Solving Phase**: Was the synthesis coherent? Did it effectively use the working phase information?\n- **Overall Quality**: Does the final answer satisfy the original query requirements?\n\nProvide specific, actionable feedback based on what you observe in this particular case.\n\n{examples}\nProcess Analysis:\n{input}{scratchpad}\n\nReflection:"
+    },
+    "reflect_prompt_json": {
+        "type": "template", 
+        "content": "Analyze the complete process (Planning, Working, Solving) and provide precise, concise feedback for both Planner and Solver agents.\n\nPlanner Evaluation:\n- Did the plan decompose the task logically?\n- Were all necessary analysis steps included?\n- Was the plan specific and actionable?\n\nSolver Evaluation:\n- Did the solver correctly synthesize working phase results?\n- Does the final ranking match user preferences from analysis?\n- Is the reasoning sound and justified?\n\nProvide concise feedback (1-2 sentences per agent). Return ONLY the JSON object - no additional text.\n\n{examples}\nProcess:\n{input}{scratchpad}\n\nJSON Response:"
+    },
+    "reflect_examples_json": {
+        "type": "raw",
+        "content": "Example 1: `{\"Planner\": {\"correctness\": false, \"reason\": \"Plan lacks explicit user preference extraction. Add step to identify preferred brands and price ranges from history.\"}, \"Solver\": {\"correctness\": true, \"reason\": \"Ranking correctly prioritizes user-preferred items based on analysis results.\"}}`\n\nExample 2: `{\"Planner\": {\"correctness\": true, \"reason\": \"Plan comprehensively covers user analysis and item evaluation.\"}, \"Solver\": {\"correctness\": false, \"reason\": \"Ranking fails to prioritize items matching user's stated preferences. Reorder to put brand-matches first.\"}}`\n\nExample 3: `{\"Planner\": {\"correctness\": false, \"reason\": \"Missing genre preference extraction.\"}, \"Solver\": {\"correctness\": false, \"reason\": \"Ranking doesn't reflect user preference data. Ensure item order matches analysis results.\"}}`"
+    },
+    "reflection_header": {
+        "type": "raw",
+        "content": "Previous reflection(s) identified areas for improvement. Use this feedback to enhance the reasoning process.\n"
+    },
+    "last_trial_header": {
+        "type": "raw",
+        "content": "Below is the complete process from the last trial.\n"
+    },
+    "reflection_last_trial_header": {
+        "type": "raw", 
+        "content": "Previous reflection(s) provide feedback on the three-phase reasoning process. Use this analysis to improve future executions.\n"
+    }
+}
